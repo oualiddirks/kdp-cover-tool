@@ -9,9 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@stripe/stripe-js": "^8.11.0",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.99.3",
+    "@types/fabric": "^5.3.11",
+    "fabric": "^5.3.0",
     "next": "16.2.1",
     "pdf-lib": "^1.17.1",
     "react": "19.2.4",
