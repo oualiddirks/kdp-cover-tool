@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   calculateSpineWidth,
@@ -13,67 +14,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import Link from "next/link";
 
-function CoverPreview({ trimWidth, trimHeight, pages, paperType, title, author }: {
-  trimWidth: number; trimHeight: number; pages: number; paperType: PaperType; title: string; author: string;
-}) {
-  const spineWidth = calculateSpineWidth(pages, paperType);
-  const fullWidth = calculateFullCoverWidth(trimWidth, pages, paperType);
-  const fullHeight = calculateFullCoverHeight(trimHeight);
-  const spineRatio = spineWidth / fullWidth;
-  const sideRatio = (1 - spineRatio) / 2;
+const CoverEditor = dynamic(() => import("@/components/editor/CoverEditor"), { ssr: false });
 
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-center">
-          <p className="text-[10px] text-white/40 mb-1">Spine Width</p>
-          <p className="text-sm font-bold text-violet-300">{spineWidth.toFixed(4)}"</p>
-        </div>
-        <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-center">
-          <p className="text-[10px] text-white/40 mb-1">Full Width</p>
-          <p className="text-sm font-bold">{fullWidth.toFixed(4)}"</p>
-        </div>
-        <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-center">
-          <p className="text-[10px] text-white/40 mb-1">Full Height</p>
-          <p className="text-sm font-bold">{fullHeight.toFixed(4)}"</p>
-        </div>
-      </div>
-      <div className="rounded-xl border border-white/[0.08] bg-[#0d0d14] p-4">
-        <p className="text-xs text-white/40 mb-3 text-center">Cover Layout Diagram</p>
-        <div className="flex rounded-lg overflow-hidden border border-white/10" style={{ height: "120px" }}>
-          <div className="flex items-center justify-center bg-violet-500/10 border-r border-dashed border-violet-500/30" style={{ flex: sideRatio }}>
-            <div className="text-center px-2">
-              <p className="text-[10px] text-violet-400 font-medium">Back Cover</p>
-              <p className="text-[9px] text-white/30 mt-0.5">{trimWidth}" x {trimHeight}"</p>
-            </div>
-          </div>
-          <div className="flex items-center justify-center bg-indigo-500/20 border-r border-dashed border-indigo-500/40 shrink-0" style={{ flex: spineRatio, minWidth: spineRatio < 0.02 ? "20px" : undefined }}>
-            <p className="text-[8px] text-indigo-300 font-medium whitespace-nowrap" style={{ writingMode: "vertical-rl", textOrientation: "mixed", transform: "rotate(180deg)" }}>
-              SPINE {spineWidth.toFixed(3)}"
-            </p>
-          </div>
-          <div className="flex items-center justify-center bg-violet-500/10" style={{ flex: sideRatio }}>
-            <div className="text-center px-2">
-              <p className="text-[10px] text-violet-400 font-medium">Front Cover</p>
-              {title && <p className="text-[9px] text-white/60 mt-1 truncate max-w-[80px]">{title}</p>}
-              {author && <p className="text-[8px] text-white/30 truncate max-w-[80px]">{author}</p>}
-            </div>
-          </div>
-        </div>
-        <div className="mt-3 flex items-center gap-2 text-[10px] text-white/30">
-          <div className="w-3 h-3 rounded-sm border border-dashed border-white/20" />
-          <span>+ 0.125" bleed on all sides (included in full dimensions)</span>
-        </div>
-      </div>
-      <div className="rounded-xl border border-violet-500/10 bg-violet-500/5 p-3">
-        <p className="text-[11px] text-violet-300/70 leading-relaxed">
-          <span className="font-semibold text-violet-300">Formula: </span>
-          Spine = {pages} pages x {paperType === "white" ? "0.002252" : paperType === "cream" ? "0.0025" : "0.002347"} ({paperType} paper) = <span className="font-semibold">{spineWidth.toFixed(4)}"</span>
-        </p>
-      </div>
-    </div>
-  );
-}
 
 const PAPER_OPTIONS: { value: PaperType; label: string }[] = [
   { value: "white", label: "White" },
@@ -301,11 +243,14 @@ function NewCoverForm() {
         </div>
 
         <div className="xl:sticky xl:top-6">
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
-            <h2 className="text-sm font-semibold mb-1">Live Preview</h2>
-            <p className="text-xs text-white/40 mb-5">Updates as you change values</p>
-            <CoverPreview trimWidth={selectedTrim.width} trimHeight={selectedTrim.height} pages={pages} paperType={paperType} title={title} author={author} />
-          </div>
+          <CoverEditor
+            trimWidth={selectedTrim.width}
+            trimHeight={selectedTrim.height}
+            pages={pages}
+            paperType={paperType}
+            title={title}
+            author={author}
+          />
         </div>
       </div>
     </form>
