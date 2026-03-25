@@ -140,7 +140,7 @@ function NewCoverForm() {
 
   return (
     <form onSubmit={handleGenerate}>
-      <div className="grid xl:grid-cols-2 gap-6 items-start">
+      <div className="grid lg:grid-cols-[360px_1fr] gap-6 items-start">
         <div className="space-y-5">
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 space-y-4">
             <h2 className="text-sm font-semibold">Book Details</h2>
@@ -242,7 +242,7 @@ function NewCoverForm() {
           </div>
         </div>
 
-        <div className="xl:sticky xl:top-6">
+        <div className="lg:sticky lg:top-6">
           <CoverEditor
             trimWidth={selectedTrim.width}
             trimHeight={selectedTrim.height}
