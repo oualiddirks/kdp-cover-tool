@@ -37,7 +37,6 @@ export default function CoversPage() {
   const [covers, setCovers] = useState<Cover[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -67,33 +66,9 @@ export default function CoversPage() {
     setDeletingId(null);
   }
 
-  async function handleDownloadPdf(cover: Cover) {
-    setPdfLoadingId(cover.id);
-    try {
-      const res = await fetch("/api/generate-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ coverId: cover.id }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        addToast(err.error || "PDF generation failed", "error");
-        setPdfLoadingId(null);
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `kdp-cover-${cover.title.replace(/\s+/g, "-")}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      addToast("PDF downloaded!", "success");
-      fetchCovers();
-    } catch {
-      addToast("Failed to generate PDF", "error");
-    }
-    setPdfLoadingId(null);
+  function handleDownloadPdf(cover: Cover) {
+    void cover;
+    addToast("Open this cover in the editor to download the PDF.", "error");
   }
 
   return (
@@ -164,14 +139,10 @@ export default function CoversPage() {
                 </div>
                 <div className="hidden md:block"><span className="text-xs text-white/40">{new Date(cover.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span></div>
                 <div className="flex items-center justify-end gap-2">
-                  <button onClick={() => handleDownloadPdf(cover)} disabled={pdfLoadingId === cover.id} className="p-1.5 rounded-lg hover:bg-white/5 text-white/40 hover:text-emerald-400 transition-colors disabled:opacity-50" title="Download PDF">
-                    {pdfLoadingId === cover.id ? (
-                      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
-                    ) : (
-                      <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                      </svg>
-                    )}
+                  <button onClick={() => handleDownloadPdf(cover)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/40 hover:text-emerald-400 transition-colors" title="Download PDF">
+                    <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
                   </button>
                   <button onClick={() => handleDelete(cover.id)} disabled={deletingId === cover.id} className="p-1.5 rounded-lg hover:bg-white/5 text-white/40 hover:text-red-400 transition-colors disabled:opacity-50" title="Delete">
                     {deletingId === cover.id ? (

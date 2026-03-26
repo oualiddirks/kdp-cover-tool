@@ -49,6 +49,8 @@ function NewCoverForm() {
   const [loading, setLoading] = useState(false);
   const [savedCoverId, setSavedCoverId] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [fabricCanvas, setFabricCanvas] = useState<any>(null);
 
   // Pre-fill from template search params
   useEffect(() => {
@@ -109,13 +111,19 @@ function NewCoverForm() {
   }
 
   async function handleDownloadPdf() {
-    if (!savedCoverId) return;
+    if (!fabricCanvas) {
+      addToast("Canvas not ready. Please wait and try again.", "error");
+      return;
+    }
     setPdfLoading(true);
     try {
+      const canvasImage: string = fabricCanvas.toDataURL({ format: "png", multiplier: 2 });
+      const fullWidth = calculateFullCoverWidth(selectedTrim.width, pages, paperType);
+      const fullHeight = calculateFullCoverHeight(selectedTrim.height);
       const res = await fetch("/api/generate-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ coverId: savedCoverId }),
+        body: JSON.stringify({ canvasImage, fullWidth, fullHeight }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -127,7 +135,7 @@ function NewCoverForm() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `kdp-cover-${savedCoverId}.pdf`;
+      a.download = `kdp-cover-${(title || "untitled").replace(/\s+/g, "-")}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
       addToast("PDF downloaded successfully!", "success");
@@ -220,7 +228,7 @@ function NewCoverForm() {
               ) : savedCoverId ? "Cover Saved!" : "Generate Cover"}
             </button>
 
-            {savedCoverId && (
+            {fabricCanvas && (
               <div className="flex gap-3">
                 <button type="button" onClick={handleDownloadPdf} disabled={pdfLoading}
                   className="flex-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-60 transition-colors py-3 text-sm font-semibold text-emerald-400">
@@ -242,7 +250,7 @@ function NewCoverForm() {
           </div>
         </div>
 
-        <div className="lg:sticky lg:top-6">
+        <div className="lg:sticky lg:top-6 min-w-0 overflow-hidden">
           <CoverEditor
             trimWidth={selectedTrim.width}
             trimHeight={selectedTrim.height}
@@ -250,6 +258,7 @@ function NewCoverForm() {
             paperType={paperType}
             title={title}
             author={author}
+            onCanvasReady={(canvas) => setFabricCanvas(canvas)}
           />
         </div>
       </div>
