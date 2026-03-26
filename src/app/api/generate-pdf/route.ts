@@ -1,37 +1,56 @@
 import { NextResponse } from "next/server";
 import { PDFDocument } from "pdf-lib";
+import { createClient } from "@/lib/supabase/server";
 
 const POINTS_PER_INCH = 72;
+const DEFAULT_FULL_WIDTH_IN = 17.225; // 8.5*2 + 0.225 spine + 0.25 bleed
+const DEFAULT_FULL_HEIGHT_IN = 11.25; // 11 + 0.25 bleed
 
 export async function POST(request: Request) {
   try {
-    const { canvasImage, fullWidth, fullHeight } = await request.json();
+    const { canvasDataUrl, coverId } = await request.json();
 
-    if (!canvasImage) {
-      return NextResponse.json({ error: "canvasImage is required" }, { status: 400 });
-    }
-    if (!fullWidth || !fullHeight) {
-      return NextResponse.json({ error: "fullWidth and fullHeight are required" }, { status: 400 });
+    if (!canvasDataUrl) {
+      return NextResponse.json({ error: "canvasDataUrl is required" }, { status: 400 });
     }
 
-    // Strip data URL prefix (data:image/png;base64, or similar)
-    const base64Data = (canvasImage as string).replace(/^data:image\/\w+;base64,/, "");
-    const imageBuffer = Buffer.from(base64Data, "base64");
+    // Get cover dimensions from Supabase or use defaults
+    let fullWidthIn = DEFAULT_FULL_WIDTH_IN;
+    let fullHeightIn = DEFAULT_FULL_HEIGHT_IN;
 
-    // Create PDF at KDP dimensions
-    const pageWidthPts = (fullWidth as number) * POINTS_PER_INCH;
-    const pageHeightPts = (fullHeight as number) * POINTS_PER_INCH;
+    if (coverId) {
+      try {
+        const supabase = await createClient();
+        const { data: cover } = await supabase
+          .from("covers")
+          .select("full_width, full_height")
+          .eq("id", coverId)
+          .single();
+        if (cover?.full_width) fullWidthIn = cover.full_width;
+        if (cover?.full_height) fullHeightIn = cover.full_height;
+      } catch {
+        // Fall through to defaults
+      }
+    }
+
+    // Strip "data:image/png;base64," prefix
+    const base64 = (canvasDataUrl as string).replace(/^data:image\/\w+;base64,/, "");
+    const imageBytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+
+    // Create PDF at KDP dimensions (inches × 72 points)
+    const fullWidthPts = fullWidthIn * POINTS_PER_INCH;
+    const fullHeightPts = fullHeightIn * POINTS_PER_INCH;
 
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([pageWidthPts, pageHeightPts]);
+    const page = pdfDoc.addPage([fullWidthPts, fullHeightPts]);
 
-    // Embed the PNG canvas image
-    const pngImage = await pdfDoc.embedPng(imageBuffer);
-    page.drawImage(pngImage, {
+    // Embed PNG and draw to fill entire page
+    const coverImage = await pdfDoc.embedPng(imageBytes);
+    page.drawImage(coverImage, {
       x: 0,
       y: 0,
-      width: pageWidthPts,
-      height: pageHeightPts,
+      width: fullWidthPts,
+      height: fullHeightPts,
     });
 
     const pdfBytes = await pdfDoc.save();
@@ -40,7 +59,6 @@ export async function POST(request: Request) {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="kdp-cover.pdf"`,
-        "Content-Length": pdfBytes.length.toString(),
       },
     });
   } catch (error) {

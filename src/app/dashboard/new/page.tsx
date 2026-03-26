@@ -117,13 +117,25 @@ function NewCoverForm() {
     }
     setPdfLoading(true);
     try {
-      const canvasImage: string = fabricCanvas.toDataURL({ format: "png", multiplier: 2 });
+      // Export canvas at 1× (reset zoom so we get the full-resolution image)
+      const currentZoom = fabricCanvas.getZoom();
       const fullWidth = calculateFullCoverWidth(selectedTrim.width, pages, paperType);
       const fullHeight = calculateFullCoverHeight(selectedTrim.height);
+      const SCALE = 72;
+      fabricCanvas.setZoom(1);
+      fabricCanvas.setWidth(Math.round(fullWidth * SCALE));
+      fabricCanvas.setHeight(Math.round(fullHeight * SCALE));
+      const canvasDataUrl: string = fabricCanvas.getElement().toDataURL("image/png", 1.0);
+      // Restore zoom
+      fabricCanvas.setZoom(currentZoom);
+      fabricCanvas.setWidth(Math.round(fullWidth * SCALE * currentZoom));
+      fabricCanvas.setHeight(Math.round(fullHeight * SCALE * currentZoom));
+      fabricCanvas.renderAll();
+
       const res = await fetch("/api/generate-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ canvasImage, fullWidth, fullHeight }),
+        body: JSON.stringify({ canvasDataUrl, coverId: savedCoverId }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -254,8 +266,7 @@ function NewCoverForm() {
           <CoverEditor
             trimWidth={selectedTrim.width}
             trimHeight={selectedTrim.height}
-            pages={pages}
-            paperType={paperType}
+            spineWidth={calculateSpineWidth(pages, paperType)}
             title={title}
             author={author}
             onCanvasReady={(canvas) => setFabricCanvas(canvas)}
