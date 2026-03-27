@@ -1,41 +1,50 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 
 type Scene = "flat" | "angled" | "standing";
+
+const SCENES: { id: Scene; label: string; transform: string; shadow: string }[] = [
+  { id: "flat",     label: "Flat",     transform: "none",                                                         shadow: "4px 8px 24px rgba(0,0,0,0.5)" },
+  { id: "angled",   label: "Angled",   transform: "perspective(800px) rotateY(-18deg) rotateX(4deg)",             shadow: "12px 16px 48px rgba(0,0,0,0.7)" },
+  { id: "standing", label: "Standing", transform: "perspective(600px) rotateY(-32deg) rotateX(2deg)",             shadow: "16px 20px 56px rgba(0,0,0,0.8)" },
+];
 
 export default function MockupPage() {
   const [image, setImage] = useState<string | null>(null);
   const [scene, setScene] = useState<Scene>("angled");
   const fileRef = useRef<HTMLInputElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setImage(url);
+    const reader = new FileReader();
+    reader.onload = (ev) => setImage(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = "";
   }
 
-  const scenes: { id: Scene; label: string; style: React.CSSProperties }[] = [
-    {
-      id: "flat",
-      label: "Flat",
-      style: { transform: "none" },
-    },
-    {
-      id: "angled",
-      label: "Angled",
-      style: { transform: "perspective(800px) rotateY(-20deg) rotateX(5deg)", boxShadow: "8px 12px 40px rgba(0,0,0,0.6)" },
-    },
-    {
-      id: "standing",
-      label: "Standing",
-      style: { transform: "perspective(600px) rotateY(-35deg)", boxShadow: "12px 16px 48px rgba(0,0,0,0.7)" },
-    },
-  ];
+  const handleDownload = useCallback(() => {
+    if (!image || !imgRef.current) return;
+    // Draw flat (no transform) version onto canvas for clean download
+    const img = imgRef.current;
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const a = document.createElement("a");
+    a.download = `book-mockup-${scene}-${Date.now()}.png`;
+    a.href = canvas.toDataURL("image/png");
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }, [image, scene]);
 
-  const currentScene = scenes.find(s => s.id === scene)!;
+  const currentScene = SCENES.find((s) => s.id === scene)!;
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-[#f0f0f5]">
@@ -43,7 +52,10 @@ export default function MockupPage() {
         <Link href="/tools" className="text-sm text-white/60 hover:text-white transition-colors">← Back to Tools</Link>
         <Link href="/" className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-            <svg width="12" height="12" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="6" height="14" rx="1" fill="white" opacity="0.9"/><rect x="10" y="2" width="6" height="14" rx="1" fill="white" opacity="0.5"/></svg>
+            <svg width="12" height="12" viewBox="0 0 18 18" fill="none">
+              <rect x="2" y="2" width="6" height="14" rx="1" fill="white" opacity="0.9" />
+              <rect x="10" y="2" width="6" height="14" rx="1" fill="white" opacity="0.5" />
+            </svg>
           </div>
           <span className="text-sm font-semibold">KDP<span className="text-violet-400">Cover</span>Tool</span>
         </Link>
@@ -57,55 +69,67 @@ export default function MockupPage() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 items-start">
-          <div className="space-y-5">
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 space-y-4">
-              <h2 className="text-sm font-semibold">Upload Cover</h2>
-              <label onClick={() => fileRef.current?.click()}
-                className="block w-full rounded-xl border-2 border-dashed border-white/20 hover:border-violet-500/40 bg-white/[0.02] cursor-pointer p-8 text-center transition-all">
-                <svg className="w-8 h-8 mx-auto mb-3 text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                </svg>
-                <p className="text-sm text-white/50">{image ? "Change image" : "Click to upload"}</p>
-                <p className="text-xs text-white/25 mt-1">JPG or PNG</p>
-                <input ref={fileRef} type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleFile} />
-              </label>
+          {/* Controls */}
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 space-y-4">
+            <h2 className="text-sm font-semibold">Upload Cover</h2>
 
-              <div>
-                <label className="text-xs text-white/50 block mb-2">Scene Style</label>
-                <div className="flex gap-2">
-                  {scenes.map(s => (
-                    <button key={s.id} onClick={() => setScene(s.id)}
-                      className={`flex-1 py-2 rounded-lg text-sm border transition-all ${scene === s.id ? "border-violet-500/60 bg-violet-500/15 text-violet-300" : "border-white/10 bg-white/5 text-white/50"}`}>
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
+            <label
+              className="block w-full rounded-xl border-2 border-dashed border-white/20 hover:border-violet-500/40 bg-white/[0.02] cursor-pointer p-8 text-center transition-all"
+              onClick={() => fileRef.current?.click()}
+            >
+              <svg className="w-8 h-8 mx-auto mb-3 text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
+              <p className="text-sm text-white/50">{image ? "Change image" : "Click to upload"}</p>
+              <p className="text-xs text-white/25 mt-1">JPG or PNG</p>
+              <input ref={fileRef} type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleFile} />
+            </label>
+
+            <div>
+              <label className="text-xs text-white/50 block mb-2">Scene Style</label>
+              <div className="flex gap-2">
+                {SCENES.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setScene(s.id)}
+                    className={`flex-1 py-2 rounded-lg text-sm border transition-all ${
+                      scene === s.id
+                        ? "border-violet-500/60 bg-violet-500/15 text-violet-300"
+                        : "border-white/10 bg-white/5 text-white/50 hover:text-white"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
               </div>
-
-              {image && (
-                <a
-                  href={image}
-                  download="book-mockup.png"
-                  className="block w-full rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors py-2.5 text-sm font-semibold text-white text-center"
-                >
-                  Download PNG
-                </a>
-              )}
             </div>
+
+            {image && (
+              <button
+                onClick={handleDownload}
+                className="w-full rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors py-2.5 text-sm font-semibold text-white"
+              >
+                Download PNG
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center justify-center min-h-64 rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.02] to-white/[0.01] p-8">
+          {/* Preview */}
+          <div className="flex items-center justify-center min-h-64 rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.02] to-white/[0.01] p-10">
             {image ? (
-              <div style={{ perspective: "1000px" }}>
+              <div style={{ perspective: "1200px" }}>
                 <img
+                  ref={imgRef}
                   src={image}
                   alt="Book mockup"
+                  crossOrigin="anonymous"
                   style={{
                     width: "200px",
                     display: "block",
                     borderRadius: "2px",
-                    ...currentScene.style,
-                    transition: "transform 0.4s ease",
+                    transform: currentScene.transform,
+                    boxShadow: currentScene.shadow,
+                    transition: "transform 0.4s ease, box-shadow 0.4s ease",
                   }}
                 />
               </div>

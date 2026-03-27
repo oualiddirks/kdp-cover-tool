@@ -30,12 +30,18 @@ export default function ConverterPage() {
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setFrontImage(url);
-    extractDominantColor(url).then(color => {
-      setBackColor(color);
-      setSpineColor(getDarkerShade(color));
-    });
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      if (!dataUrl) return;
+      setFrontImage(dataUrl);
+      extractDominantColor(dataUrl).then((color) => {
+        setBackColor(color);
+        setSpineColor(getDarkerShade(color));
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   }
 
   useEffect(() => {
@@ -74,6 +80,7 @@ export default function ConverterPage() {
         ctx.drawImage(img, dx, dy, dw, dh);
         setReady(true);
       };
+      // data: URLs don't need crossOrigin — avoids tainted canvas issues
       img.src = frontImage;
     } else {
       ctx.fillStyle = "#4c1d95";

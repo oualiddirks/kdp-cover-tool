@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -51,6 +51,7 @@ function NewCoverForm() {
   const [pdfLoading, setPdfLoading] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [fabricCanvas, setFabricCanvas] = useState<any>(null);
+  const exportCanvasRef = useRef<(() => string | null) | null>(null);
 
   // Pre-fill from template search params
   useEffect(() => {
@@ -111,31 +112,21 @@ function NewCoverForm() {
   }
 
   async function handleDownloadPdf() {
-    if (!fabricCanvas) {
+    if (!fabricCanvas && !exportCanvasRef.current) {
       addToast("Canvas not ready. Please wait and try again.", "error");
       return;
     }
     setPdfLoading(true);
     try {
-      // Export canvas at 1× (reset zoom so we get the full-resolution image)
-      const currentZoom = fabricCanvas.getZoom();
-      const fullWidth = calculateFullCoverWidth(selectedTrim.width, pages, paperType);
-      const fullHeight = calculateFullCoverHeight(selectedTrim.height);
-      const SCALE = 72;
-      fabricCanvas.setZoom(1);
-      fabricCanvas.setWidth(Math.round(fullWidth * SCALE));
-      fabricCanvas.setHeight(Math.round(fullHeight * SCALE));
-      const canvasDataUrl: string = fabricCanvas.getElement().toDataURL("image/png", 1.0);
-      // Restore zoom
-      fabricCanvas.setZoom(currentZoom);
-      fabricCanvas.setWidth(Math.round(fullWidth * SCALE * currentZoom));
-      fabricCanvas.setHeight(Math.round(fullHeight * SCALE * currentZoom));
-      fabricCanvas.renderAll();
+      const canvasDataUrl = exportCanvasRef.current?.() ?? null;
 
       const res = await fetch("/api/generate-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ canvasDataUrl, coverId: savedCoverId }),
+        body: JSON.stringify({
+          coverId: savedCoverId ?? undefined,
+          canvasDataUrl: canvasDataUrl ?? undefined,
+        }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -147,13 +138,15 @@ function NewCoverForm() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `kdp-cover-${(title || "untitled").replace(/\s+/g, "-")}.pdf`;
+      a.download = `kdp-cover-${Date.now()}.pdf`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
       addToast("PDF downloaded successfully!", "success");
-      setPdfLoading(false);
     } catch {
       addToast("Failed to generate PDF", "error");
+    } finally {
       setPdfLoading(false);
     }
   }
@@ -240,7 +233,7 @@ function NewCoverForm() {
               ) : savedCoverId ? "Cover Saved!" : "Generate Cover"}
             </button>
 
-            {fabricCanvas && (
+            {(fabricCanvas || exportCanvasRef.current) && (
               <div className="flex gap-3">
                 <button type="button" onClick={handleDownloadPdf} disabled={pdfLoading}
                   className="flex-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-60 transition-colors py-3 text-sm font-semibold text-emerald-400">
@@ -270,6 +263,7 @@ function NewCoverForm() {
             title={title}
             author={author}
             onCanvasReady={(canvas) => setFabricCanvas(canvas)}
+            onExportReady={(fn) => { exportCanvasRef.current = fn; }}
           />
         </div>
       </div>

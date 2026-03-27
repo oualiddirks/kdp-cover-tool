@@ -13,6 +13,7 @@ interface CoverEditorProps {
   title: string;
   author: string;
   onCanvasReady?: (canvas: unknown) => void;
+  onExportReady?: (exportFn: () => string | null) => void;
 }
 
 type TabId = "images" | "text" | "background" | "styles";
@@ -33,7 +34,7 @@ const PRESETS = [
 ];
 
 export default function CoverEditor({
-  trimWidth, trimHeight, spineWidth, title, author, onCanvasReady,
+  trimWidth, trimHeight, spineWidth, title, author, onCanvasReady, onExportReady,
 }: CoverEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -242,6 +243,17 @@ export default function CoverEditor({
       drawGuides(fc);
       setReady(true);
       onCanvasReady?.(fc);
+
+      // Provide export function to parent
+      const exportFn = () => {
+        try {
+          return fc.toDataURL({ format: "png", quality: 1, multiplier: 3 }) as string;
+        } catch {
+          return null;
+        }
+      };
+      onExportReady?.(exportFn);
+
       saveHistory();
 
       return () => {
