@@ -8,6 +8,19 @@ interface CoverConcept {
   preset: string;
 }
 
+interface PenName {
+  name: string;
+  genreFit: string;
+  whyItWorks: string;
+}
+
+interface ColoringConcept {
+  title: string;
+  description: string;
+  difficulty: string;
+  tags: string[];
+}
+
 const GENRE_CONCEPTS: Record<string, CoverConcept[]> = {
   "Fantasy": [
     { title: "Shadow of the Ancients", description: "A dramatic full-bleed illustration of a lone figure silhouetted against a vast, glowing magical portal. Deep indigo and gold dominate the scene, with intricate rune patterns bordering the edges. The sky is split between burning amber and deep violet, suggesting an otherworldly realm.", palette: ["#1a0a3d","#ffd700","#6b21a8","#c4861a"], typography: "EB Garamond Bold, decorative caps for title", preset: "fantasy" },
@@ -45,6 +58,46 @@ const GENRE_CONCEPTS: Record<string, CoverConcept[]> = {
   ],
 };
 
+const FALLBACK_PEN_NAMES: PenName[] = [
+  { name: "Isabella Hartwell", genreFit: "Romance, Historical Fiction", whyItWorks: "Soft, feminine sound with aristocratic undertones perfect for romance readers." },
+  { name: "J.D. Carver", genreFit: "Thriller, Crime", whyItWorks: "Initials add mystery; Carver suggests precision and a cutting edge." },
+  { name: "Celeste Monroe", genreFit: "Romance, Paranormal", whyItWorks: "Celestial first name with a powerful last name — romantic and slightly mysterious." },
+  { name: "Reed Holloway", genreFit: "Thriller, Psychological", whyItWorks: "Short, punchy, and hollow — suggests psychological depth." },
+  { name: "Autumn Sinclair", genreFit: "Romance, Women's Fiction", whyItWorks: "Seasonal first name feels warm and memorable; Sinclair adds sophistication." },
+  { name: "Marcus Stone", genreFit: "Thriller, Action", whyItWorks: "Strong, masculine, hard-sounding name signals action and toughness." },
+  { name: "Vivian Cross", genreFit: "Romance, Dark Fiction", whyItWorks: "The contrast between 'Vivian' (vivacious) and 'Cross' (tension) suggests passionate drama." },
+  { name: "K.T. Brennan", genreFit: "Thriller, Crime", whyItWorks: "Gender-neutral initials increase readership; Irish surname feels authentic for crime fiction." },
+  { name: "Sophia Langford", genreFit: "Romance, Contemporary", whyItWorks: "Timeless, elegant combination that works across romance subgenres." },
+  { name: "Dax Mercer", genreFit: "Thriller, Tech", whyItWorks: "Unusual first name is memorable; Mercer is a classic literary surname." },
+];
+
+const FALLBACK_COLORING_CONCEPTS: ColoringConcept[] = [
+  {
+    title: "Lotus Mandala",
+    description: "A centered lotus flower mandala with eight petals radiating outward. Each petal contains delicate geometric patterns including tiny triangles and concentric circles. The outer ring features alternating teardrop shapes and small diamonds. Perfect for adult colorists seeking meditative detail.",
+    difficulty: "Medium",
+    tags: ["Geometric", "Floral", "Meditative"],
+  },
+  {
+    title: "Enchanted Forest Owl",
+    description: "A majestic great horned owl perched on a gnarled branch, its large feathers filled with intricate patterns of swirls, flowers, and geometric shapes. The background features detailed forest foliage and a full moon with mandala-like rays. Suitable for intermediate colorists.",
+    difficulty: "Detailed",
+    tags: ["Bird", "Forest", "Nature"],
+  },
+  {
+    title: "Happy Garden Butterfly",
+    description: "A large butterfly with symmetrical wings divided into clear sections filled with simple flowers, dots, and wavy lines. Bold outlines and generous spaces make it accessible for children and beginners. Surrounded by simple daisies and grass.",
+    difficulty: "Simple",
+    tags: ["Insect", "Nature", "Kids"],
+  },
+  {
+    title: "Celtic Knotwork Border",
+    description: "A full-page Celtic knotwork design where interlocking bands weave through an intricate pattern. Four large knot medallions at the corners connect via detailed interlaced borders, creating a complex but satisfying coloring challenge for advanced colorists.",
+    difficulty: "Detailed",
+    tags: ["Celtic", "Intricate", "Traditional"],
+  },
+];
+
 function getConceptsForGenre(genre: string, style: string, prompt: string): CoverConcept[] {
   const base = GENRE_CONCEPTS[genre] || GENRE_CONCEPTS["Fantasy"];
   return base.map(c => ({
@@ -58,21 +111,26 @@ function getConceptsForGenre(genre: string, style: string, prompt: string): Cove
 
 export async function POST(request: Request) {
   try {
-    const { genre, style, prompt } = await request.json();
+    const body = await request.json();
+    const { action } = body;
 
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
-    if (anthropicKey) {
-      try {
-        const { Anthropic } = await import("@anthropic-ai/sdk");
-        const client = new Anthropic({ apiKey: anthropicKey });
+    // ── Cover Concepts (default / action: "cover-concepts") ──────────────────
+    if (!action || action === "cover-concepts") {
+      const { genre, style, prompt } = body;
 
-        const message = await client.messages.create({
-          model: "claude-opus-4-5",
-          max_tokens: 1024,
-          messages: [{
-            role: "user",
-            content: `Generate 4 distinct book cover concepts for a ${genre} book with a ${style} visual style.
+      if (anthropicKey) {
+        try {
+          const { Anthropic } = await import("@anthropic-ai/sdk");
+          const client = new Anthropic({ apiKey: anthropicKey });
+
+          const message = await client.messages.create({
+            model: "claude-opus-4-5",
+            max_tokens: 1024,
+            messages: [{
+              role: "user",
+              content: `Generate 4 distinct book cover concepts for a ${genre} book with a ${style} visual style.
 ${prompt ? `Book description: ${prompt}` : ""}
 
 For each concept, provide:
@@ -94,28 +152,127 @@ Respond ONLY with valid JSON in this exact format:
     }
   ]
 }`,
-          }],
-        });
+            }],
+          });
 
-        const content = message.content[0];
-        if (content.type === "text") {
-          const jsonMatch = content.text.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            return NextResponse.json(parsed);
+          const content = message.content[0];
+          if (content.type === "text") {
+            const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              return NextResponse.json(parsed);
+            }
           }
+        } catch (aiError) {
+          console.warn("AI generation failed, using fallback:", aiError);
         }
-      } catch (aiError) {
-        console.warn("AI generation failed, using fallback:", aiError);
       }
+
+      const concepts = getConceptsForGenre(genre, style, prompt);
+      return NextResponse.json({ concepts });
     }
 
-    // Fallback: return curated concepts
-    const concepts = getConceptsForGenre(genre, style, prompt);
-    return NextResponse.json({ concepts });
+    // ── Pen Names ─────────────────────────────────────────────────────────────
+    if (action === "pen-names") {
+      const { genres, style: penStyle, realName } = body;
+
+      if (anthropicKey) {
+        try {
+          const { Anthropic } = await import("@anthropic-ai/sdk");
+          const client = new Anthropic({ apiKey: anthropicKey });
+
+          const message = await client.messages.create({
+            model: "claude-opus-4-5",
+            max_tokens: 1200,
+            messages: [{
+              role: "user",
+              content: `Generate 10 creative pen names for an author.
+Genre preferences: ${genres || "General Fiction"}
+Style: ${penStyle || "friendly"}
+Real name hint: ${realName || "none provided"}
+
+Return ONLY valid JSON in this exact format:
+{
+  "names": [
+    {
+      "name": "Full Name",
+      "genreFit": "Genre 1, Genre 2",
+      "whyItWorks": "Brief explanation of why this name works for the genre and style"
+    }
+  ]
+}`,
+            }],
+          });
+
+          const content = message.content[0];
+          if (content.type === "text") {
+            const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              return NextResponse.json(parsed);
+            }
+          }
+        } catch (aiError) {
+          console.warn("AI pen name generation failed, using fallback:", aiError);
+        }
+      }
+
+      return NextResponse.json({ names: FALLBACK_PEN_NAMES });
+    }
+
+    // ── Coloring Concepts ─────────────────────────────────────────────────────
+    if (action === "coloring-concepts") {
+      const { style: colorStyle, complexity, theme } = body;
+
+      if (anthropicKey) {
+        try {
+          const { Anthropic } = await import("@anthropic-ai/sdk");
+          const client = new Anthropic({ apiKey: anthropicKey });
+
+          const message = await client.messages.create({
+            model: "claude-opus-4-5",
+            max_tokens: 1200,
+            messages: [{
+              role: "user",
+              content: `Generate 4 detailed coloring book page concepts.
+Style: ${colorStyle || "Mandala"}
+Complexity: ${complexity || "medium"}
+Theme: ${theme || "general"}
+
+Return ONLY valid JSON in this exact format:
+{
+  "concepts": [
+    {
+      "title": "Page Title",
+      "description": "Detailed description of what to draw on this page (2-3 sentences describing the specific elements, patterns, and composition)",
+      "difficulty": "Simple|Medium|Detailed",
+      "tags": ["tag1", "tag2", "tag3"]
+    }
+  ]
+}`,
+            }],
+          });
+
+          const content = message.content[0];
+          if (content.type === "text") {
+            const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              return NextResponse.json(parsed);
+            }
+          }
+        } catch (aiError) {
+          console.warn("AI coloring concepts failed, using fallback:", aiError);
+        }
+      }
+
+      return NextResponse.json({ concepts: FALLBACK_COLORING_CONCEPTS });
+    }
+
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 
   } catch (error) {
     console.error("AI generate error:", error);
-    return NextResponse.json({ error: "Failed to generate concepts" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to generate" }, { status: 500 });
   }
 }
