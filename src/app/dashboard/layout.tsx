@@ -78,24 +78,24 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
   return (
     <>
       {mobileOpen && (
-        <div className="fixed inset-0 z-20 bg-black/60 md:hidden" onClick={onClose} />
+        <div className="fixed inset-0 z-20 bg-black/30 md:hidden" onClick={onClose} />
       )}
-      <aside className={`fixed md:static inset-y-0 left-0 z-30 flex flex-col w-60 shrink-0 border-r border-white/5 bg-[#0d0d14] min-h-screen px-4 py-6 transition-transform duration-200 ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
+      <aside className={`fixed md:static inset-y-0 left-0 z-30 flex flex-col w-60 shrink-0 border-r border-[#e8e8ed] bg-white min-h-screen px-4 py-6 transition-transform duration-200 ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
         <Link href="/dashboard" className="flex items-center gap-2 mb-8 px-2" onClick={onClose}>
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-sm">
             <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
               <rect x="2" y="2" width="6" height="14" rx="1" fill="white" opacity="0.9" />
               <rect x="10" y="2" width="6" height="14" rx="1" fill="white" opacity="0.5" />
             </svg>
           </div>
-          <span className="text-sm font-semibold tracking-tight">KDP<span className="text-violet-400">Cover</span>Tool</span>
+          <span className="text-sm font-semibold tracking-tight text-[#1d1d1f]">KDP<span className="text-indigo-600">Cover</span></span>
         </Link>
-        <nav className="flex-1 space-y-1">
+        <nav className="flex-1 space-y-0.5">
           {navItems.map((item) => {
             const active = pathname === item.href;
             return (
               <Link key={item.label} href={item.href} onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? "bg-violet-500/15 text-violet-300 font-medium" : "text-white/50 hover:text-white hover:bg-white/5"}`}>
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${active ? "bg-indigo-50 text-indigo-700 font-medium" : "text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f5f5f7]"}`}>
                 {item.icon}
                 {item.label}
               </Link>
@@ -103,20 +103,20 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
           })}
         </nav>
         <div className="mt-6 space-y-3">
-          <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+          <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-violet-300">Free Plan</span>
-              <span className="text-xs text-white/40">0 / 3 exports</span>
+              <span className="text-xs font-semibold text-indigo-700">Free Plan</span>
+              <span className="text-xs text-[#86868b]">0 / 3 exports</span>
             </div>
-            <div className="w-full h-1.5 rounded-full bg-white/10 mb-3">
-              <div className="h-full w-0 rounded-full bg-violet-500" />
+            <div className="w-full h-1.5 rounded-full bg-indigo-100 mb-3">
+              <div className="h-full w-0 rounded-full bg-indigo-500" />
             </div>
-            <Link href="/dashboard/settings" className="block w-full rounded-lg bg-violet-600 hover:bg-violet-500 transition-colors py-2 text-center text-xs font-semibold text-white">
+            <Link href="/dashboard/settings" className="block w-full rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors py-2 text-center text-xs font-semibold text-white">
               Upgrade to Pro
             </Link>
           </div>
           <button onClick={handleLogout} disabled={loggingOut}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all">
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-[#86868b] hover:text-red-600 hover:bg-red-50 transition-all">
             <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
             </svg>
@@ -133,36 +133,43 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const router = useRouter();
   const pageInfo = pageTitles[pathname] ?? { title: "Dashboard", subtitle: "" };
   return (
-    <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 md:px-6 shrink-0">
+    <header className="h-16 border-b border-[#e8e8ed] bg-white flex items-center justify-between px-4 md:px-6 shrink-0">
       <div className="flex items-center gap-3">
-        <button className="md:hidden p-1.5 rounded-lg hover:bg-white/5 text-white/60 transition-colors" onClick={onMenuClick} aria-label="Open menu">
+        <button className="md:hidden p-1.5 rounded-lg hover:bg-[#f5f5f7] text-[#6e6e73] transition-colors" onClick={onMenuClick} aria-label="Open menu">
           <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
           </svg>
         </button>
         <div>
-          <h1 className="text-base font-semibold leading-tight">{pageInfo.title}</h1>
-          {pageInfo.subtitle && <p className="text-xs text-white/40 leading-tight">{pageInfo.subtitle}</p>}
+          <h1 className="text-base font-semibold leading-tight text-[#1d1d1f]">{pageInfo.title}</h1>
+          {pageInfo.subtitle && <p className="text-xs text-[#86868b] leading-tight">{pageInfo.subtitle}</p>}
         </div>
       </div>
       <div className="flex items-center gap-3">
         <button onClick={() => router.push("/dashboard/new")}
-          className="flex items-center gap-2 rounded-lg bg-violet-600 hover:bg-violet-500 transition-colors px-3 md:px-4 py-2 text-sm font-medium text-white">
+          className="flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors px-3 md:px-4 py-2 text-sm font-medium text-white shadow-sm">
           <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 4.5v11m5.5-5.5h-11" />
           </svg>
           <span className="hidden sm:inline">New Cover</span>
         </button>
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xs font-bold shrink-0">U</div>
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white shrink-0">U</div>
       </div>
     </header>
   );
 }
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Full-screen dark editor mode — bypass sidebar/topbar
+  if (pathname === "/dashboard/new") {
+    return <>{children}</>;
+  }
+
   return (
-    <div className="flex min-h-screen bg-[#0a0a0f] text-[#f0f0f5]">
+    <div className="flex min-h-screen bg-[#f5f5f7] text-[#1d1d1f]">
       <Sidebar mobileOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar onMenuClick={() => setMobileMenuOpen(true)} />
